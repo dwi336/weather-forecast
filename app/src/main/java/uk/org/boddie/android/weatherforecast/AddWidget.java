@@ -20,27 +20,30 @@ package uk.org.boddie.android.weatherforecast;
 
 import android.content.Context;
 import android.content.res.Resources;
-import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import java.util.HashMap;
 
 import uk.org.boddie.android.weatherforecast.R;
 
-public class AddWidget extends LinearLayout implements View.OnClickListener{
-    private Button addButton;
-    private AddLocationListener handler;
+public class AddWidget extends LinearLayout implements View.OnClickListener, AdapterView.OnItemClickListener{
+    private ArrayAdapter<String> adapter;
+    private Button cancelButton;
+    private ModeHandler handler;
+    private AddLocationListener listener;
     private AutoCompleteTextView locationEdit;
     private HashMap<String, String> places;
 
-    public AddWidget(Context context) {
+    public AddWidget(final Context context, final AddLocationListener listener, final ModeHandler handler) {
         super(context);
         setOrientation(LinearLayout.HORIZONTAL);
+        this.listener = listener;
+        this.handler = handler;
 
         // Read the lists of place names and place specifications from the
         // application's resources, creating a dictionary from the two lists.
@@ -56,38 +59,40 @@ public class AddWidget extends LinearLayout implements View.OnClickListener{
 
         // Use a specialised adapter to provide filtered lists of data for an
         // auto-complete-enabled text view.
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, android.R.layout.simple_dropdown_item_1line, place_names);
+        this.adapter = new ArrayAdapter<String>(context, android.R.layout.simple_dropdown_item_1line, place_names);
 
         this.locationEdit = new AutoCompleteTextView(context);
-        this.locationEdit.setAdapter(adapter);
+        this.locationEdit.setAdapter(this.adapter);
+        this.locationEdit.setOnItemClickListener(this);
 
-        this.addButton = new Button(context);
-        this.addButton.setText("Add");
-        this.addButton.setOnClickListener(this);
+        this.cancelButton = new Button(context);
+        this.cancelButton.setText("X");
+        this.cancelButton.setOnClickListener(this);
 
         addWeightedView(this.locationEdit, 2);
-        addWeightedView(this.addButton, 0);
+        addWeightedView(this.cancelButton, 0);
     }
 
-    public AddWidget(Context context, AttributeSet attrs) {
-        this(context);
-    }
-
-    public AddWidget(Context context, AttributeSet attrs, int defStyle) {
-        this(context);
-    }
-
-    public void setAddLocationListener(AddLocationListener handler){
-        this.handler = handler;
-    }
-  
     public void addWeightedView(View view, float weight){
         view.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT, weight));
         addView(view);
     }
-  
-    public void onClick(View paramView){
-        String text = ((TextView)this.locationEdit).getText().toString();
+
+    @Override
+    public void onClick(View view) {
+        if (view == this.cancelButton) {
+            this.handler.enterMenuMode();
+        }
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        String text = this.adapter.getItem(position);
+        this.addLocation(text);
+        this.locationEdit.clearFocus();
+    }
+
+    public void addLocation(String text) {
         String name = text.trim();
         String spec;
         try{
@@ -113,7 +118,7 @@ public class AddWidget extends LinearLayout implements View.OnClickListener{
             // Potentially validate the specifier by requesting a page from
             // yr.no.
         }
-        this.handler.addLocation(name, spec);
+        this.listener.addLocation(name, spec);
         this.locationEdit.setText("");
     }
 }

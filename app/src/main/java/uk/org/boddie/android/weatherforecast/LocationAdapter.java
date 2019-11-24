@@ -52,6 +52,14 @@ public class LocationAdapter extends BaseAdapter{
         return position;
     }
 
+    public void add(String item) {
+        this.items.add(item);
+    }
+
+    public void remove(String item) {
+        this.items.remove(item);
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent){
 

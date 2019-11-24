@@ -8,13 +8,10 @@ https://bitbucket.org/dboddie/weather-forecast-android
 
 ![A screenshot of the application](docs/Screenshot_2019-04-20-09-55-49.png)
 
-** The yr.no service tries to build up secure connections with TLS 1.2
-without any lower version down grading. On older Android devices,
-running versions earlier than Android 5 (Lollipop) the application
-will switch to open HTTP communication, if TLS 1.2 would not have
-been supported.**
-
-## Usage 
+See the [Changelog](Changelog) for details about each version of this
+application. **Note that version 1.2.0 and later may have issues with handling
+secure communication with the server, particularly for older Android devices,
+running versions earlier than Android 5 (Lollipop).**
 
 ### Adding, removing and selecting locations
 
@@ -81,7 +78,7 @@ The development is done with Eclipse and andmore-Plugin. A direct gradle build i
 ### API Reference
 
 Mininum SDK: 14
-Target SDK: 28
+Target SDK: 29
 
 ## License
 
@@ -137,4 +134,27 @@ application tries to follow the terms, conditions and guidelines for use of
 that service:
 
 http://om.yr.no/verdata/vilkar/
+
+More information about the data obtained from the service can be found at the
+following locations:
+
+http://om.yr.no/verdata/free-weather-data/
+http://om.yr.no/verdata/xml/
+http://om.yr.no/verdata/xml/spesifikasjon/
+
+The place names included with the application were obtained from the following
+locations:
+
+http://fil.nrk.no/yr/viktigestader/noreg.txt
+http://fil.nrk.no/yr/viktigestader/verda.txt
+
+This information is presumably provided under the terms of the Creative Commons
+Attribution 4.0 International (CC BY 4.0) license, as used by the geonames.org
+service for the data the noreg.txt and verda.txt files are based on.
+
+The symbols supplied were obtained from the following repository and are
+licensed under the MIT license:
+
+https://github.com/YR/weather-symbols/
+https://github.com/YR/weather-symbols/blob/master/LICENSE
 

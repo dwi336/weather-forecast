@@ -24,26 +24,26 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
-public class RemoveWidget extends LinearLayout implements View.OnClickListener{
-    private Button cancelButton;
-    private RemoveLocationListener handler;
-    private Button removeButton;
+public class MenuWidget extends LinearLayout implements View.OnClickListener{
+    private Button addButton;
+    private Button configButton;
+    private ModeHandler handler;
 
-    public RemoveWidget(Context context, final RemoveLocationListener handler) {
+    public MenuWidget(final Context context, final ModeHandler handler) {
         super(context);
         setOrientation(LinearLayout.HORIZONTAL);
+
         this.handler = handler;
+        this.addButton = new Button(context);
+        this.addButton.setText("Add");
+        this.addButton.setOnClickListener(this);
 
-        this.removeButton = new Button(context);
-        this.removeButton.setText("Remove");
-        this.removeButton.setOnClickListener(this);
+        this.configButton = new Button(context);
+        this.configButton.setText("Configure");
+        this.configButton.setOnClickListener(this);
 
-        this.cancelButton = new Button(context);
-        this.cancelButton.setText("Cancel");
-        this.cancelButton.setOnClickListener(this);
-
-        addWeightedView(this.removeButton, 1);
-        addWeightedView(this.cancelButton, 1);
+        addWeightedView(this.addButton, 1);
+        addWeightedView(this.configButton, 1);
     }
 
     public void addWeightedView(View view, float weight){
@@ -51,13 +51,11 @@ public class RemoveWidget extends LinearLayout implements View.OnClickListener{
         addView(view);
     }
 
-    public void onClick(View view){
-
-        if (view.equals(this.removeButton)) {
-            this.handler.removeLocation();
+    public void onClick(final View view) {
+        if (view.equals(this.addButton)) {
+            this.handler.enterAddMode();
         } else {
-            this.handler.cancelRemove();
+            this.handler.startConfiguration();
         }
     }
 }
-

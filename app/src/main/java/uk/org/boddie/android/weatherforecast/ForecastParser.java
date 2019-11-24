@@ -18,9 +18,6 @@
 
 package uk.org.boddie.android.weatherforecast;
 
-import android.content.res.Resources;
-import android.content.res.TypedArray;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParsePosition;
@@ -35,23 +32,11 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import uk.org.boddie.android.weatherforecast.R;
-
 public class ForecastParser{
-    private HashMap<String, Integer> symbols = new HashMap<String, Integer>();
+    private HashMap<String, Integer> symbols;
 
-    public ForecastParser(Resources resources){
-
-        // Obtain the keys and values to be used to create the symbols
-        // dictionary from the application's resources.
-        String[] symbols = resources.getStringArray(R.array.symbols);
-        TypedArray resourceIDs = resources.obtainTypedArray(R.array.resourceIDs);
-
-        int j = Math.min(symbols.length, resourceIDs.length());
-        for (int i = 0; i < j; i++){
-            this.symbols.put(symbols[i], resourceIDs.getResourceId(i, -1));
-        }
-        resourceIDs.recycle();
+    public ForecastParser(HashMap<String, Integer> hashMap) {
+        this.symbols = hashMap;
     }
 
     public List<Forecast> parse(InputStream stream) throws XmlPullParserException, IOException{
@@ -88,7 +73,7 @@ public class ForecastParser{
                         found = true;
                     }
                 }
-                
+
                 if (found == true){
                      section = name;
                 } else if (!section.equals("")){

@@ -50,8 +50,10 @@ public class TLSSocketFactory extends SSLSocketFactory{
         Log.i("DUCK", "UseTLS");
         
         String[] protocols = socket.getEnabledProtocols();
-        for (int i=0; i < protocols.length; i++) {
-            Log.i("DUCK", protocols[i]);
+        if (protocols!=null) {
+            for (int i=0; i < protocols.length; i++) {
+                Log.i("DUCK", protocols[i]);
+            }
         }
 
         socket.setEnabledProtocols(new String[] { "TLSv1.2" } );

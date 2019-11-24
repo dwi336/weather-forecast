@@ -19,7 +19,9 @@
 package uk.org.boddie.android.weatherforecast;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.content.res.TypedArray;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -42,16 +44,18 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import uk.org.boddie.android.weatherforecast.R;
 
-public class WeatherForecastActivity extends Activity implements LocationListener{
+public class WeatherForecastActivity extends Activity implements ConfigureListener, LocationListener{
     private Map<String, CacheItem> cache = new HashMap<String, CacheItem>();
+    private SharedPreferences preferences;
     private TLSSocketFactory socketFactory;
-
+    private ConfigureWidget configureWidget;
     private long current_time;
     private LocationWidget entryWidget;
     private ForecastWidget forecastWidget;
     private ForecastParser parser;
     private String place;
     private String state = "entry";
+    private HashMap<String, Integer> symbols = new HashMap<String, Integer>();
     private Task task;
 
     public WeatherForecastActivity() {
@@ -61,12 +65,26 @@ public class WeatherForecastActivity extends Activity implements LocationListene
     public void onCreate(Bundle paramBundle){
 
         super.onCreate(paramBundle);
+        setTheme(android.R.style.Theme_DeviceDefault);
 
-        this.entryWidget = new LocationWidget(this);
-        this.entryWidget.setLocationListener(this);
+        // Obtain the keys and values to be used to create the symbols
+        // dictionary from the application's resources.
+        Resources resources = getResources();
+        String[] symbols = resources.getStringArray(R.array.symbols);
+        TypedArray resourceIDs = resources.obtainTypedArray(R.array.resourceIDs);
+
+        int j = Math.min(symbols.length, resourceIDs.length());
+        for (int i = 0; i < j; i++){
+            this.symbols.put(symbols[i], resourceIDs.getResourceId(i, -1));
+        }
+        resourceIDs.recycle();
+
+        this.parser = new ForecastParser(this.symbols);
+
+        this.entryWidget = new LocationWidget(this,this,this);
+        this.configureWidget = new ConfigureWidget(this, this.symbols, this);
         this.forecastWidget = new ForecastWidget(this);
         setContentView(this.entryWidget);
-        this.parser = new ForecastParser(getResources());
 
         // By default, don't use a custom socket factory. We need one to handle
         // communications for versions of Android before Lollipop (5), apparently.
@@ -85,8 +103,22 @@ public class WeatherForecastActivity extends Activity implements LocationListene
             }
         } catch (Exception e) {
             // Tell the user about the lack of secure networking.
-            Toast.makeText(this, "Cannot use a secure protocol.\nFalling back to insecure networking.", Toast.LENGTH_LONG).show();	
+            Toast.makeText(this, "Cannot use a secure protocol.\nFalling back to insecure networking.", Toast.LENGTH_LONG).show();
         }
+        this.preferences = this.getSharedPreferences("WeatherForecast", 0);
+        this.restorePreferences();
+    }
+
+    @Override
+    public void restorePreferences() {
+        this.configureWidget.restore(this.preferences);
+    }
+
+    @Override
+    public void savePreferences() {
+        final SharedPreferences.Editor editor = this.preferences.edit();
+        this.configureWidget.save(editor);
+        editor.commit();
     }
 
     public void onPause(){
@@ -116,13 +148,16 @@ public class WeatherForecastActivity extends Activity implements LocationListene
         }
         this.state = "fetching";
 
+        // Normal operation:
         this.task = new Task(this, this.socketFactory);
         String[] array = new String[1];
         array[0] = location;
         this.task.execute(array);
-        //this.parseForecasts(self.getSampleStream());
+        
+        // Testing using sample data:
+        //Forecasts forecasts = new Forecasts(this.parser.parse(this.getSampleStream()));
+        //this.showForecasts(forecasts.forecasts, "Invalid sample input");
     }
-
 
     public void showForecasts(List<Forecast> forecasts, String errorMessage){
 
@@ -135,8 +170,10 @@ public class WeatherForecastActivity extends Activity implements LocationListene
         this.cache.put( this.place, new CacheItem(this.current_time, forecasts) );
 
         try {
-            this.forecastWidget.addForecasts(forecasts);
-
+            this.forecastWidget = new ForecastWidget(this);
+            this.forecastWidget.restore(this.preferences);
+            this.forecastWidget.addForecasts(forecasts, this.preferences);
+            
             this.state = "forecast";
             this.setContentView(this.forecastWidget);
 
@@ -157,14 +194,26 @@ public class WeatherForecastActivity extends Activity implements LocationListene
     }
 
     public InputStream getSampleStream(){
-
         Resources ressources = this.getResources();
         return ressources.openRawResource(R.raw.sample);
     }
+    
+    public void startConfiguration() {
+        this.state = "configure";
+        this.setContentView(this.configureWidget);
+    }
+
+    public void finishConfiguration(boolean save) {
+        if (save) {
+            this.savePreferences();
+        }
+        this.restorePreferences();
+        this.state = "entry";
+        this.setContentView(this.entryWidget);
+    }
 
     public void onBackPressed(){
-
-        if (this.state.equals("forecast")){
+        if ( this.state.equals("forecast") || this.state.equals("configure") ){
             // Return to the entry widget.
             this.state = "entry";
             setContentView(this.entryWidget);
@@ -241,7 +290,9 @@ public class WeatherForecastActivity extends Activity implements LocationListene
             WeatherForecastActivity activity = activityReference.get();
             if (activity == null || activity.isFinishing()) return;
 
-            activity.showForecasts(forecasts.forecasts, this.errorMessage);
+            if (forecasts != null) {
+                activity.showForecasts(forecasts.forecasts, this.errorMessage);
+            }
         }
     }
 

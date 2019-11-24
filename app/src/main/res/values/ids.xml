@@ -17,12 +17,11 @@
      along with this program.  If not, see <http://www.gnu.org/licenses/>
 -->
 <resources>
-    <item type="id" name="addwidget_addwidget2_id" />
+    <item type="id" name="configurewidget_headerlayout_id" />
+    <item type="id" name="configurewidget_middlelayout_id" />
+    <item type="id" name="configurewidget_scrollview_id" />
     <item type="id" name="forecastwidget_header_id" />
     <item type="id" name="forecastwidget_scrollView_id" />
     <item type="id" name="forecastwidget_footer_id" />
-    <item type="id" name="locationwidget_addwidget1_id" />
-    <item type="id" name="locationwidget_addwidget2_id" />
-    <item type="id" name="locationwidget_removewidget1_id" />
-    <item type="id" name="locationwidget_removewidget2_id" />
+    <item type="id" name="locationwidget_addwidget_id" />
 </resources>

@@ -20,13 +20,14 @@ package uk.org.boddie.android.weatherforecast;
 
 import android.content.Context;
 import android.os.Environment;
-import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.BaseAdapter;
+import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.ViewAnimator;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,58 +37,56 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import uk.org.boddie.android.weatherforecast.R;
 
-public class LocationWidget extends RelativeLayout implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener, AddLocationListener, RemoveLocationListener {
+public class LocationWidget extends RelativeLayout implements AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener, AddLocationListener, RemoveLocationListener, ModeHandler {
     private LocationAdapter adapter;
-    private AddWidget addWidget;
+    private ConfigureListener configureHandler;
     private int currentItem = -1;
     private ListView listView;
     private LocationListener locationHandler;
     private HashMap<String, String> locations;
-    private String mode = "normal";
-    private ArrayList<String> order;
-    private RemoveWidget removeWidget;
- 
-    public LocationWidget(Context context) {
+    private String mode = "menu";
+    private LinkedList<String> order;
+    private String previous_mode = "menu";
+    private HashMap<String, Integer> view_indices;
+    private ViewAnimator views;
+
+    public LocationWidget(final Context context, final LocationListener locationHandler, final ConfigureListener configureHandler) {
         super(context);
-
+        this.configureHandler = configureHandler;
+        this.locationHandler = locationHandler;
         this.adapter = this.getAdapter();
-
         this.listView = new ListView(context);
         this.listView.setAdapter(this.adapter);
         this.listView.setOnItemClickListener(this);
         this.listView.setOnItemLongClickListener(this);
 
-        this.addWidget = new AddWidget(context);
-        this.addWidget.setId(R.id.locationwidget_addwidget1_id);
-        this.addWidget.setAddLocationListener(this);
-        this.removeWidget = new RemoveWidget(context);
-        this.removeWidget.setRemoveLocationListener(this);
+        this.views = new ViewAnimator(context);
+        this.views.addView(new MenuWidget(context, this), 0, this.getViewParams());
+        this.views.addView(new AddWidget(context, this, this), 1, this.getViewParams());
+        this.views.addView(new RemoveWidget(context, this), 2, this.getViewParams());
+        this.views.setDisplayedChild(0);
+        this.views.setId(R.id.locationwidget_addwidget_id);
+
+        final HashMap<String, Integer> view_indices = new HashMap<String, Integer>();
+        view_indices.put("menu", Integer.valueOf(0));
+        view_indices.put("add", Integer.valueOf(1));
+        view_indices.put("remove", Integer.valueOf(2));
+        this.view_indices = view_indices;
 
         RelativeLayout.LayoutParams listParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         listParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-        listParams.addRule(RelativeLayout.ABOVE, R.id.locationwidget_addwidget1_id);
+        listParams.addRule(RelativeLayout.ABOVE, R.id.locationwidget_addwidget_id);
         addView(this.listView, listParams);
-        addView(this.addWidget, this.getAddParams());
-    }
-
-    public LocationWidget(Context context, AttributeSet attrs) {
-        this(context);
-    }
-
-    public LocationWidget(Context context, AttributeSet attrs, int defStyle) {
-        this(context);
-    }
-
-    public void setLocationListener(LocationListener locationHandler){
-        this.locationHandler = locationHandler;
+        addView(this.views, this.getAddParams());
     }
 
     public void readLocations(){
         this.locations = new HashMap<String, String>();
-        this.order = new ArrayList<String>();
+        this.order = new LinkedList<String>();
 
         if (!Environment.getExternalStorageState().equals("mounted")) {
             return;
@@ -187,7 +186,7 @@ public class LocationWidget extends RelativeLayout implements AdapterView.OnItem
         }
 
         if (this.currentItem != -1) {
-            leaveRemoveMode();
+            enterAddMode();
         }
     }
 
@@ -200,13 +199,14 @@ public class LocationWidget extends RelativeLayout implements AdapterView.OnItem
         this.locations.put(name, spec);
         this.order.add(name);
 
-        this.adapter.items.add(name);
+        this.adapter.add(name);
         this.listView.setAdapter(this.adapter);
+        this.enterMenuMode();
     }
 
     public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id){
 
-        if (this.mode.equals("normal")){
+        if (!this.mode.equals("remove")){
             this.currentItem = position;
             enterRemoveMode();
         }
@@ -214,45 +214,59 @@ public class LocationWidget extends RelativeLayout implements AdapterView.OnItem
         return true;
     }
 
-    public void enterRemoveMode(){
-
-        removeView(this.addWidget);
-        this.addWidget.setId(R.id.locationwidget_addwidget2_id);
-
-        RelativeLayout.LayoutParams removeParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        removeParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        removeParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-        removeParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-
-        addView(this.removeWidget, removeParams);
-        this.removeWidget.setId(R.id.locationwidget_removewidget1_id);
-        this.mode = "remove";
-    }
-
-    public void leaveRemoveMode(){
-
-        removeView(this.removeWidget);
-        this.removeWidget.setId(R.id.locationwidget_removewidget2_id);
-        addView(this.addWidget, getAddParams());
-        this.addWidget.setId(R.id.locationwidget_addwidget1_id);
-        this.mode = "normal";
-    }
-
     public void removeLocation(){
         String place = (String)this.order.remove(this.currentItem);
         this.locations.remove(place);
 
-        this.adapter.items.remove(place);
+        this.adapter.remove(place);
         this.listView.setAdapter(this.adapter);
 
         this.currentItem = -1;
-        this.leaveRemoveMode();
+        this.enterPreviousMode();
     }
 
     public void cancelRemove(){
 
         this.currentItem = -1;
-        this.leaveRemoveMode();
+        this.enterPreviousMode();
+    }
+
+    public void enterPreviousMode(){       
+        final Integer n = (Integer) this.view_indices.get(this.previous_mode);
+        if (n == null) {
+            throw new RuntimeException();
+        }
+        this.views.setDisplayedChild(n.intValue());
+        this.mode = this.previous_mode;
+        
+    }
+
+    public void enterMenuMode() {
+        this.views.setDisplayedChild(0);
+        this.previous_mode = this.mode;
+        this.mode = "menu";
+    }
+
+    public void enterAddMode() {
+        this.views.setDisplayedChild(1);
+        this.previous_mode = this.mode;
+        this.mode = "add";
+    }
+
+    public void enterRemoveMode(){
+        this.views.setDisplayedChild(2);
+        this.previous_mode = this.mode;
+        this.mode = "remove";
+    }
+
+    public void startConfiguration() {
+        // This causes the LocationWidget to be hidden.
+        this.configureHandler.startConfiguration();
+    }
+
+    public FrameLayout.LayoutParams getViewParams() {
+        return new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
     }
 
     public RelativeLayout.LayoutParams getAddParams(){
