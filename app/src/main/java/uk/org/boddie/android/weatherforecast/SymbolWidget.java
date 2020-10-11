@@ -28,12 +28,12 @@ import android.widget.TextView;
 
 public class SymbolWidget extends RelativeLayout{
     private TemperatureWidget tempWidget;
+    private WindWidget windWidget;
 
     public SymbolWidget(final Context context, final Forecast forecast) {
         super(context);
 
-        // Temperature Symbol Description
-        //                    Wind
+        // Temperature Symbol Wind Speed
 
         // Symbol
         final RelativeLayout.LayoutParams itemLayout = this.itemLayout();
@@ -62,28 +62,24 @@ public class SymbolWidget extends RelativeLayout{
         itemLayout2.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
         this.addView(this.tempWidget, itemLayout2);
 
-        // Description and wind speed
-        final LinearLayout descLayout = new LinearLayout(context);
-        descLayout.setOrientation(LinearLayout.VERTICAL);
-
-        final TextView descView = new TextView(context);
-        descView.setText(forecast.description);
-        descLayout.addView(descView, itemLayout2);
-
-        final TextView windView = new TextView(context);
-        windView.setText((CharSequence)forecast.windSpeed);
-        descLayout.addView(windView, itemLayout2);
+        // Wind speed
+        this.windWidget = new WindWidget(context);
+        this.windWidget.setText(forecast.windSpeed + " " + forecast.windUnit);
 
         final RelativeLayout.LayoutParams itemLayout3 = this.itemLayout();
         itemLayout3.addRule(RelativeLayout.CENTER_VERTICAL);
         itemLayout3.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-        this.addView(descLayout, itemLayout3);
+        this.addView(this.windWidget, itemLayout3);
     }
 
     public TemperatureWidget getTempWidget() {
         return this.tempWidget;
     }
-
+    
+    public WindWidget getWindWidget() {
+        return this.windWidget;
+    }
+    
     public RelativeLayout.LayoutParams itemLayout() {
         return new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     }

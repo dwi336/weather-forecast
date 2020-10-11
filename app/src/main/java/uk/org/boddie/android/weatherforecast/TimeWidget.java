@@ -28,18 +28,9 @@ public class TimeWidget extends AdjustableText{
     public TimeWidget(final Context context, final Forecast forecast, final Calendar calendar) {
         super(context, "time adjustment");
 
-        String timeString = String.format("%02d:%02d:%02d - ", 
+        String timeString = String.format("%02d:%02d", 
                 calendar.get(Calendar.HOUR_OF_DAY),
-                calendar.get(Calendar.MINUTE),
-                calendar.get(Calendar.SECOND));
-
-        Date date = forecast.to_;
-        calendar.setTime(date);
-
-        timeString += String.format("%02d:%02d:%02d",
-                calendar.get(Calendar.HOUR_OF_DAY),
-                calendar.get(Calendar.MINUTE),
-                calendar.get(Calendar.SECOND));
+                calendar.get(Calendar.MINUTE));
 
         this.setText(timeString);
 

@@ -45,19 +45,13 @@ public class ConfigureWidget extends RelativeLayout{
     private SizeControl tempControl;
     private SizeControl timeControl;
     private TimeWidget timeWidget;
+    public SizeControl windControl;
 
     public ConfigureWidget(final Context context, final HashMap<String, Integer> symbols, final ConfigureListener listener) {
         super(context);
 
         this.symbols = symbols;
         this.listener = listener;
-
-        // Header
-
-        final TextView title = new TextView(context);
-        title.setTextSize((float)(title.getTextSize() * 1.25));
-        title.setGravity(Gravity.CENTER);
-        title.setText("Configuration");
 
         this.background = context.getResources().getColor(android.R.color.background_light);
         final View headerLine = new View(context);
@@ -68,7 +62,6 @@ public class ConfigureWidget extends RelativeLayout{
         headerLayout.setOrientation(LinearLayout.VERTICAL);
 
         headerLayout.setId(R.id.configurewidget_headerlayout_id);
-        headerLayout.addView(title);
         headerLayout.addView(headerLine, headerLineParams);
 
         // Middle
@@ -85,11 +78,12 @@ public class ConfigureWidget extends RelativeLayout{
         final ScrollView scrollView = new ScrollView(context);
         final LinearLayout scrollLayout = new LinearLayout(context);
         scrollLayout.setOrientation(LinearLayout.VERTICAL); 
-        
+
         this.headerControl = this.addSizeControl("Place Name", null, scrollLayout);
         this.dateControl = this.addSizeControl("Date", null, scrollLayout);
         this.timeControl = this.addSizeControl("Time", null, scrollLayout);
         this.tempControl = this.addSizeControl("Temperature", null, scrollLayout);
+        this.windControl = this.addSizeControl("Wind speed", null, scrollLayout);
         this.updateControls();
         scrollView.addView(scrollLayout);
         scrollView.setId(R.id.configurewidget_scrollview_id);
@@ -135,6 +129,7 @@ public class ConfigureWidget extends RelativeLayout{
         this.dateWidget.restore(preferences);
         this.timeWidget.restore(preferences);
         this.symbolWidget.getTempWidget().restore(preferences);
+        this.symbolWidget.getWindWidget().restore(preferences);        
     }
 
     public void save(final SharedPreferences.Editor editor) {
@@ -142,6 +137,7 @@ public class ConfigureWidget extends RelativeLayout{
         this.dateWidget.save(editor);
         this.timeWidget.save(editor);
         this.symbolWidget.getTempWidget().save(editor);
+        this.symbolWidget.getWindWidget().save(editor);
     }
 
     public void updateConfiguration() {
@@ -158,6 +154,7 @@ public class ConfigureWidget extends RelativeLayout{
         this.dateControl.setAdjustable(this.dateWidget);
         this.timeControl.setAdjustable(this.timeWidget);
         this.tempControl.setAdjustable(this.symbolWidget.getTempWidget());
+        this.windControl.setAdjustable(this.symbolWidget.getWindWidget());
     }
 
     public void updateSample() {
@@ -169,24 +166,23 @@ public class ConfigureWidget extends RelativeLayout{
         this.header = new Header(context);
         this.header.setText("Place Name");
 
-        final Calendar instance = Calendar.getInstance();
-        final int value = instance.get(Calendar.DAY_OF_MONTH);
+        final Calendar calendar = Calendar.getInstance();
+        final int value = calendar.get(Calendar.DAY_OF_MONTH);
 
         final Forecast forecast = new Forecast();
-        forecast.from_ = instance.getTime();
-        forecast.to_ = instance.getTime();
-        final Integer n = (Integer) this.symbols.get("46");
+        forecast.date = calendar.getTime();
+        final Integer n = (Integer) this.symbols.get("rain");
         if (n == null) {
             throw new RuntimeException();
         }
         forecast.symbol = n.intValue();
         forecast.temperatureUnit = "celsius";
         forecast.temperature = "12";
-        forecast.description = "Light rain";
-        forecast.windSpeed = "Moderate breeze";
+        forecast.windSpeed = "3";
+        forecast.windUnit = "m/s";
 
-        this.dateWidget = new DateWidget(context, instance, value);
-        this.timeWidget = new TimeWidget(context, forecast, instance);
+        this.dateWidget = new DateWidget(context, calendar, value);
+        this.timeWidget = new TimeWidget(context, forecast, calendar);
         this.symbolWidget = new SymbolWidget(context, forecast);
 
         final LinearLayout.LayoutParams centreParams = new LinearLayout.LayoutParams(

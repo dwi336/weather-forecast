@@ -21,6 +21,7 @@ package uk.org.boddie.android.weatherforecast;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -39,6 +40,7 @@ public class ForecastWidget extends RelativeLayout{
     private LinearLayout forecastLayout;
     private List<Forecast> forecasts;
     private Header header;
+    private String place_name = "";
     private ScrollView scrollView;
 
     @SuppressWarnings("deprecation")
@@ -84,7 +86,8 @@ public class ForecastWidget extends RelativeLayout{
         LinearLayout.LayoutParams footerLineParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1); // 1 pixel in height
 
         this.creditLabel = new TextView(context);
-
+        this.creditLabel.setGravity(Gravity.CENTER);
+        
         footer.addView(footerLine, footerLineParams);
         footer.addView(this.creditLabel);
 
@@ -111,7 +114,7 @@ public class ForecastWidget extends RelativeLayout{
         addView(footer, footerParams);    
     }
 
-    public void addForecasts(List<Forecast> forecasts, final SharedPreferences preferences) {
+    public void addForecasts(String place_name, List<Forecast> forecasts, final SharedPreferences preferences) {
 
         this.forecastLayout.removeAllViews();
         this.scrollView.scrollTo(0, 0);
@@ -120,10 +123,10 @@ public class ForecastWidget extends RelativeLayout{
             return;
         }
 
-        this.header.setText(forecasts.get(0).place);
-        this.creditLabel.setText(forecasts.get(0).credit);
+        this.header.setText(place_name);
+        this.creditLabel.setText("Data from MET Norway");
 
-        Date firstDate = forecasts.get(0).from_;
+        Date firstDate = forecasts.get(0).date;
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(firstDate);
 
@@ -136,7 +139,7 @@ public class ForecastWidget extends RelativeLayout{
             forecast = forecasts.get(i);
 
             // Get the day of the month.
-            Date date = forecast.from_;
+            Date date = forecast.date;
             calendar.setTime(date);
             int day = calendar.get(Calendar.DAY_OF_MONTH);
 
@@ -157,15 +160,17 @@ public class ForecastWidget extends RelativeLayout{
             // Symbol, temperature, description and wind
             SymbolWidget symbolWidget = new SymbolWidget(context, forecast);
             symbolWidget.getTempWidget().restore(preferences);
+            symbolWidget.getWindWidget().restore(preferences);
             this.forecastLayout.addView(symbolWidget, this.rowLayout());
         }
+        this.place_name = place_name;
         this.forecasts = forecasts;
     }
 
     public void restore(final SharedPreferences preferences) {
         this.header.restore(preferences);
         if (this.forecasts != null) {
-            this.addForecasts(this.forecasts, preferences);
+            this.addForecasts(this.place_name, this.forecasts, preferences);
         }
     }
 

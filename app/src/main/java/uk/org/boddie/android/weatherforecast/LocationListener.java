@@ -19,5 +19,5 @@
 package uk.org.boddie.android.weatherforecast;
 
 public abstract interface LocationListener{
-    public abstract void locationEntered(String location);
+    public abstract void locationEntered(String name, String location);
 }

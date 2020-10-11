@@ -180,7 +180,7 @@ public class LocationWidget extends RelativeLayout implements AdapterView.OnItem
 
         try{
             String location = (String)this.adapter.getItem((int)id);
-            locationHandler.locationEntered((String)this.locations.get(location));
+            locationHandler.locationEntered(location, (String)this.locations.get(location));
         } catch (Exception e){
             throw new RuntimeException("Killed");
         }

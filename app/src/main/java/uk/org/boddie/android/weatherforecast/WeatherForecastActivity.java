@@ -34,18 +34,21 @@ import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import org.json.JSONException;
 import org.xmlpull.v1.XmlPullParserException;
 
 import uk.org.boddie.android.weatherforecast.R;
 
 public class WeatherForecastActivity extends Activity implements ConfigureListener, LocationListener{
     private Map<String, CacheItem> cache = new HashMap<String, CacheItem>();
+    public HashMap<String, Coordinates> coordinates;
     private SharedPreferences preferences;
     private TLSSocketFactory socketFactory;
     private ConfigureWidget configureWidget;
@@ -53,7 +56,8 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
     private LocationWidget entryWidget;
     private ForecastWidget forecastWidget;
     private ForecastParser parser;
-    private String place;
+    public String place;
+    public String place_name;
     private String state = "entry";
     private HashMap<String, Integer> symbols = new HashMap<String, Integer>();
     private Task task;
@@ -80,6 +84,25 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
         resourceIDs.recycle();
 
         this.parser = new ForecastParser(this.symbols);
+
+        // Map place specifications to coordinates so that when another component
+        // provides a specification, it can be used to obtain a forecast.
+        final String[] places = resources.getStringArray(R.array.places);
+        final String[] latitudes = resources.getStringArray(R.array.latitudes);
+        final String[] longitudes = resources.getStringArray(R.array.longitudes);
+        final String[] altitudes = resources.getStringArray(R.array.altitudes);
+
+        this.coordinates = new HashMap<String, Coordinates>();
+
+        int i = 0;
+        while (i < latitudes.length) {
+            final Coordinates c = new Coordinates();
+            c.latitude = latitudes[i];
+            c.longitude = longitudes[i];
+            c.altitude = altitudes[i];
+            this.coordinates.put(places[i].toLowerCase(), c);
+            i++;
+        }
 
         this.entryWidget = new LocationWidget(this,this,this);
         this.configureWidget = new ConfigureWidget(this, this.symbols, this);
@@ -126,7 +149,7 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
         this.entryWidget.writeLocations();
     }
 
-    public void locationEntered(String location){
+    public void locationEntered(String name, String location){
 
         if (this.state.equals("fetching")) {
             return;
@@ -134,6 +157,8 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
 
         this.current_time = System.currentTimeMillis();
         this.place = location;
+        this.place_name = name;
+        location = location.toLowerCase();
 
         try{
             CacheItem item = (CacheItem)this.cache.get(location);
@@ -146,14 +171,27 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        Coordinates coordinates;
+        try {
+            coordinates = this.coordinates.get(location);
+            if (coordinates == null) {
+                throw new Exception();
+            }
+        } catch (Exception e) {
+            this.showError("");
+            this.state = "entry";
+            return;
+        }
+
         this.state = "fetching";
 
         // Normal operation:
         this.task = new Task(this, this.socketFactory);
-        String[] array = new String[1];
-        array[0] = location;
+        Coordinates[] array = new Coordinates[1];
+        array[0] = coordinates;
         this.task.execute(array);
-        
+
         // Testing using sample data:
         //Forecasts forecasts = new Forecasts(this.parser.parse(this.getSampleStream()));
         //this.showForecasts(forecasts.forecasts, "Invalid sample input");
@@ -172,8 +210,8 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
         try {
             this.forecastWidget = new ForecastWidget(this);
             this.forecastWidget.restore(this.preferences);
-            this.forecastWidget.addForecasts(forecasts, this.preferences);
-            
+            this.forecastWidget.addForecasts(this.place_name, forecasts, this.preferences);
+
             this.state = "forecast";
             this.setContentView(this.forecastWidget);
 
@@ -197,7 +235,7 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
         Resources ressources = this.getResources();
         return ressources.openRawResource(R.raw.sample);
     }
-    
+
     public void startConfiguration() {
         this.state = "configure";
         this.setContentView(this.configureWidget);
@@ -224,7 +262,7 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
     }
 
     //  Params  Progress Result
-    private static class Task extends AsyncTask<String, Integer, Forecasts> {
+    private static class Task extends AsyncTask<Coordinates, Integer, Forecasts> {
         private WeakReference<WeatherForecastActivity> activityReference;
         private TLSSocketFactory socketFactory;
         private String errorMessage;
@@ -236,14 +274,14 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
         }
 
         @Override
-        protected Forecasts doInBackground(String...params){
+        protected Forecasts doInBackground(Coordinates... params){
 
             // get a reference to the activity if it is still there
             WeatherForecastActivity activity = activityReference.get();
             if (activity == null || activity.isFinishing()) return null;
 
             // Unpack the location from the array.
-            String location = (String) params[0];
+            Coordinates location = (Coordinates) params[0];
 
             Forecasts forecasts;
             try{
@@ -255,17 +293,17 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
             return forecasts;
         }
 
-        private Forecasts fetchData(String place, WeatherForecastActivity activity){
+        private Forecasts fetchData(Coordinates coordinates, WeatherForecastActivity activity){
             URL url = null;
 
+            // Try to send an HTTPS request even if we have already warned about the
+            // lack of support when the application started. Sending an HTTP request
+            // will fail due to a 301 Moved Permanently response.
             try {
-                if (this.socketFactory != null) {
-                    url = new URL("https://www.yr.no/place/" + place + "/forecast.xml");
-                } else {
-                    // Fall back to HTTP. We will have already warned about this when
-                    // the application started.
-                    url = new URL("http://www.yr.no/place/" + place + "/forecast.xml");
-                }
+                url = new URL("https://api.met.no/weatherapi/locationforecast/2.0/compact?" + 
+                    "altitude=" + coordinates.altitude +
+                    "&lat=" + coordinates.latitude +
+                    "&lon="+ coordinates.longitude);
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             }
@@ -273,12 +311,15 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
             Forecasts forecasts = null;
             try {
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setInstanceFollowRedirects(true);
+                connection.setInstanceFollowRedirects(true);          
+                connection.setRequestProperty("User-Agent", "uk.org.boddie.android.weatherforecast");
+                connection.setRequestProperty("Accept", "application/json");
+
                 stream = new BufferedInputStream(connection.getInputStream());
                 forecasts = activity.new Forecasts(activity.parser.parse(stream));
                 stream.close();
-            } catch (XmlPullParserException | IOException e1) {
-                e1.printStackTrace();
+            } catch (JSONException | IOException e) {
+                return activity.new Forecasts();
             }
 
             return forecasts;
@@ -306,8 +347,22 @@ public class WeatherForecastActivity extends Activity implements ConfigureListen
         }
     }
 
+    private class Coordinates{
+        public String altitude;
+        public String latitude;
+        public String longitude;
+
+        public Coordinates() {
+            super();
+        }
+    }
+    
     private class Forecasts{
         private List<Forecast> forecasts;
+
+        protected Forecasts(){
+            this.forecasts = new ArrayList<Forecast>();
+        }
 
         protected Forecasts(List<Forecast> forecasts){
             this.forecasts = forecasts;

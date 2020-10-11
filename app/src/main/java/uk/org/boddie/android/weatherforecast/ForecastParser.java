@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 David Boddie <david@boddie.org.uk>
- * Copyright (C) 2019 Dietmar Wippig <dwi336.dev@gmail.com>
+ * Copyright (C) 2020 Dietmar Wippig <dwi336.dev@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,19 +18,20 @@
 
 package uk.org.boddie.android.weatherforecast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
 public class ForecastParser{
     private HashMap<String, Integer> symbols;
@@ -39,111 +40,74 @@ public class ForecastParser{
         this.symbols = hashMap;
     }
 
-    public List<Forecast> parse(InputStream stream) throws XmlPullParserException, IOException{
+    public List<Forecast> parse(InputStream stream) throws IOException, JSONException{
 
-        XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-        XmlPullParser parser = factory.newPullParser();
-        parser.setInput(stream, null);
+        // https://stackoverflow.com/questions/309424/how-do-i-read-convert-an-inputstream-into-a-string-in-java
+        final ByteArrayOutputStream buf_out = new ByteArrayOutputStream();
+        while (true) {
+            final int b = stream.read();
+            if (b == -1) {
+                break;
+            }
+            buf_out.write(b);
+        }
 
-        int eventType = parser.getEventType();
-        String section = "";
-        String sections[] = {"location","credit","tabular"};
+        final String json_text = buf_out.toString("UTF-8");
 
-        // According to the specification, all times are local to the place:
-        // https://hjelp.yr.no/hc/en-us/articles/360009342913-XML-specification-of-forecast-xml
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
-        String place = "";
-        String credit = "";
-        TimeZone timezone = TimeZone.getDefault();
-        ArrayList<Forecast> forecasts = new ArrayList<Forecast>();
-        Forecast forecast = new Forecast();
+        final ArrayList<Forecast> forecasts = new ArrayList<Forecast>();
 
-        while ( eventType != XmlPullParser.END_DOCUMENT ){
+        final JSONObject obj = ((JSONObject)new JSONTokener(json_text).nextValue());
+        final JSONObject properties = obj.getJSONObject("properties");
+        final JSONObject units = properties.getJSONObject("meta").getJSONObject("units");
+        final JSONArray timeseries = properties.getJSONArray("timeseries");
 
-            eventType = parser.next();
+        int t = 0;
+        while ( t < timeseries.length() ){   
+            final JSONObject f = timeseries.getJSONObject(t);
+            final Forecast forecast = new Forecast();
+            final String time_text = f.getString("time");
+            forecast.date = dateFormat.parse(time_text, new ParsePosition(0));
+            final JSONObject data = f.getJSONObject("data");
 
-            if (eventType == XmlPullParser.START_TAG){
-
-                String name = parser.getName();
-
-                boolean found = false;
-                for (int element = 0 ; element < sections.length; element++) {
-                    if ( name.equals(sections[element]) ){
-                        found = true;
+            if (data.has("instant")) {
+                final JSONObject instant = data.getJSONObject("instant");
+                final JSONObject details = instant.getJSONObject("details");
+                forecast.windSpeed = details.getString("wind_speed");
+                forecast.windUnit = units.getString("wind_speed");
+                forecast.temperature = details.getString("air_temperature");
+                forecast.temperatureUnit = units.getString("air_temperature");
+            }
+            JSONObject summary;
+            if (data.has("next_1_hours")) {
+                summary = data.getJSONObject("next_1_hours").getJSONObject("summary");
+            } else if (data.has("next_6_hours")) {
+                summary = data.getJSONObject("next_6_hours").getJSONObject("summary");
+            } else if (data.has("next_12_hours")) {
+                summary = data.getJSONObject("next_12_hours").getJSONObject("summary");
+            } else {
+                summary = null;
+                forecast.symbol = -1;
+            }
+            if (summary != null) {
+                final String symbol = summary.getString("symbol_code");
+                try {
+                    final Integer n = this.symbols.get(symbol);
+                    if (n == null) {
+                        throw new Exception();
                     }
+                    forecast.symbol = n.intValue();
                 }
-
-                if (found == true){
-                     section = name;
-                } else if (!section.equals("")){
-
-                    if (name.equals("name")){
-                        while (eventType != XmlPullParser.TEXT) {
-                            eventType = parser.next();
-                        }
-
-                        place = parser.getText();
-
-                    } else if (name.equals("timezone")) {
-                        timezone = TimeZone.getTimeZone(parser.getAttributeValue(null, "id"));
-
-                    } else if (name.equals("link")) {
-                        credit = parser.getAttributeValue(null, "text");
-
-                    } else if (name.equals("time")) {
-
-                        forecast = new Forecast();
-                        forecast.place = place;
-                        forecast.credit = credit;
-
-                        String from_ = parser.getAttributeValue(null, "from");
-                        String to_ = parser.getAttributeValue(null, "to");
-
-                        forecast.from_ = dateFormat.parse(from_, new ParsePosition(0));
-                        forecast.to_ = dateFormat.parse(to_, new ParsePosition(0));
-
-                    } else if (name.equals("symbol")) {
-
-                        forecast.description = parser.getAttributeValue(null, "name");
-                        String symbol = parser.getAttributeValue(null, "var");
-
-                        forecast.midDate = new Date(forecast.from_.getTime() / 2 + forecast.to_.getTime() / 2);
-
-                        try{
-                            forecast.symbol = (this.symbols.get(symbol)).intValue();
-                        } catch (Exception e) {
-                            forecast.symbol = -1;
-                        }
-
-                  } else if (name.equals("windSpeed")) {
-                      forecast.windSpeed = parser.getAttributeValue(null, "name");
-
-                  } else if (name.equals("temperature")) {
-                      forecast.temperature = parser.getAttributeValue(null, "value");
-                      forecast.temperatureUnit = parser.getAttributeValue(null, "unit");
-
-                  }
-              }
-          } else if (eventType == XmlPullParser.END_TAG) {
-
-              String name = parser.getName();
-
-              boolean found = false;
-              for (int element = 0 ; element < sections.length; element++) {
-                  if ( name.equals(sections[element]) ){
-                      found = true;
-                  }
-              }
-
-              if ( name.equals(section) && (found == true) ) {
-                  section = "";
-              } else if (section.equals("tabular") && name.equals("time")) {
-                  forecasts.add(forecast);
-              }
-          }
-      }
-      return forecasts;
+                catch (Exception e) {
+                    forecast.symbol = -1;
+                }
+            }
+            forecasts.add(forecast);
+            t++;
+        }
+        return forecasts;
     }
 }
 

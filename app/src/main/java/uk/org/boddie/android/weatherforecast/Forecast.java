@@ -21,14 +21,11 @@ package uk.org.boddie.android.weatherforecast;
 import java.util.Date;
 
 public class Forecast{
-    public String credit;
+    public Date date;
     public String description;
-    public Date from_;
-    public Date midDate;
-    public String place;
     public int symbol;
     public String temperature;
     public String temperatureUnit;
-    public Date to_;
     public String windSpeed;
+    public String windUnit;
 }

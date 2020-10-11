@@ -18,14 +18,10 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="uk.org.boddie.android.weatherforecast"    
-    android:versionCode="142"
-    android:versionName="1.4.2"
+    package="uk.org.boddie.android.weatherforecast"
+    android:versionCode="150"
+    android:versionName="1.5.0"
     tools:ignore="GradleOverrides">
-
-    <uses-sdk
-        android:minSdkVersion="14"
-        android:targetSdkVersion="29" />
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>

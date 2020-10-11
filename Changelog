@@ -1,0 +1,85 @@
+1.5.0
+Updated the fetching code and parser to use the new service URL and JSON format.
+Changed the widgets to show the wind speed, removing the description since none
+is supplied in the JSON forecast.
+Included latitude, longitude and altitude information with the place data as
+these replace place specifiers as part of requests. As a result, custom place
+names can no longer be used to obtain forecasts.
+
+1.4.2
+Updated dependency information to fix an API mismatch that caused a crash at
+start-up.
+
+1.4.1
+Updated dependency information to fix F-Droid builds.
+
+1.4.0
+Added a screen to allow sizes of symbols and labels to be configured.
+
+1.3.0
+Removed daytime handling code, using the "var" attribute of "symbol"
+elements to determine the correct symbol to use.
+
+1.2.1
+Added build dependency metadata to help with F-Droid builds.
+
+1.2.0
+Added code to work around HTTPS issues related to the lack of support for
+SSLv3 and TLSv1.0,1.1 on the yr.no server, coupled with a bug that causes
+protocol negotiation to fall back to SSLv3, plus lack of support for TLSv1.2
+on older Android devices.
+
+What should happen is this:
+
+ * If we can't use secure communications then we fall back to HTTP and warn the
+   user before any communications are performed.
+ * On Android version >= 5 and later, things should just work.
+ * On Android 4.1 <= version < 5 we try to use a custom socket factory that
+   creates sockets using the TLSv1.2 protocol.
+ * On Android version <= 4.0 we just fall back to HTTP and warn the user.
+
+1.1.0
+Reverted the change to the method which determines whether a forecast time is
+between sunrise and sunset. This ignores the date, and only compares the time
+again.
+
+1.0.9
+Fixed the forecast parser to treat times as local times instead of UTC times.
+
+1.0.8
+Updated the time for cached forecasts to 60 minutes to comply with the terms
+of service:
+https://hjelp.yr.no/hc/en-us/articles/360001946134-Data-access-and-terms-of-service
+
+1.0.7
+Changed the activity and background task to perform forecast parsing in the
+background. This tries to avoid potential problems if a network failure occurs
+after a connection is made but before the data is fetched and parsed.
+
+1.0.6
+Ensured that place names are correctly decoded from the values stored in the
+locations.txt file. Ideally, we would store the names along with these values.
+
+1.0.5
+Added a special check to allow unrecognised names to be interpreted as place specifiers.
+
+Added instructions for adding custom locations directly to the locations.txt file.
+
+1.0.4
+Created a simplified version of the icon used as the launcher icon so that
+tools used to create PNG images can more accurately represent the original
+image.
+
+Refactored the network code to run in a separate thread in order to make the
+application behave properly when built for newer SDK versions.
+
+1.0.2
+[Build] Disabled the use of the icon cache.
+
+1.0.1
+[Build] Added a version number for inclusion in the package manifest.
+
+1.0.0
+Added information about building the application without signing.
+Added information about the application version and the version of the
+toolchain used to build it.

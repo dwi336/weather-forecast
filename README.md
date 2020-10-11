@@ -4,9 +4,9 @@ This application displays weather forecasts from the yr.no service.
 It is a Java port of the original Serpentine implementation, which 
 is published under
 
-https://bitbucket.org/dboddie/weather-forecast-android
+https://gitlab.com/dboddie/weather-forecast
 
-![A screenshot of the application](docs/Screenshot_2019-04-20-09-55-49.png)
+![A screenshot of the application](docs/Screenshot_20201011-224922.png)
 
 See the [Changelog](Changelog) for details about each version of this
 application. **Note that version 1.2.0 and later may have issues with handling
@@ -34,44 +34,11 @@ forecast will be shown. Otherwise, a "No connection" message will be displayed.
 ### Adding custom locations
 
 The app contains a list of known locations which I obtained from the yr.no
-service, but yr.no itself knows about many more places than these. If your
-preferred location is not recognised by the application but can be found at
-yr.no then the following workaround can be used to add it to your list of
-locations.
+service, but yr.no itself knows about many more places than these. It was
+previously possible to add custom locations to the list of those known by the
+app, but this feature has been temporarily removed.
 
-The app stores its locations in a file in the external storage of your device.
-If you use a file browser on your phone, you can find a file called
-`locations.txt` in the `Download/WeatherForecast` directory. For example, it
-might be found in the following location:
-
-  SD Card
-    Download
-      WeatherForecast
-        locations.txt
-
-The corresponding path is `/sdcard/Download/WeatherForecast/locations.txt` if
-you access it via a shell.
-
-The file contains a list of locations which are taken from parts of the URLs
-you can visit at yr.no. For example, the forecast for Cairo can be found at
-this URL:
-
-  https://www.yr.no/place/Egypt/Cairo/Cairo/
-
-The `locations.txt` file contains a location on each line. The part of the
-above URL that should be included on a line in the `locations.txt` file is
-this:
-
-  Egypt/Cairo/Cairo
-
-Each line of the file contains an entry like this, with names of countries,
-regions and cities separated by slashes. Some locations are specified using
-more than three parts, particularly those in Norway.
-
-Update the file to include the custom locations you want and restart the
-Weather Forecast application. The new locations should now be available.
-
-## Building 
+## Building the application
 
 The development is done with Eclipse and andmore-Plugin. A direct gradle build is also supported.
 
@@ -129,18 +96,11 @@ Attribution 4.0 International (CC BY 4.0) license [CC BY 4.0] (http://creativeco
 In addition to them the app uses icons from [Google Design Material Icons](https://design.google.com/icons/index.html) licensed under Apache License Version 2.0.
 
 
-The weather forecasts are obtained from the service at yr.no and the
+The weather forecasts are obtained from the service at met.no and the
 application tries to follow the terms, conditions and guidelines for use of
 that service:
 
-http://om.yr.no/verdata/vilkar/
-
-More information about the data obtained from the service can be found at the
-following locations:
-
-http://om.yr.no/verdata/free-weather-data/
-http://om.yr.no/verdata/xml/
-http://om.yr.no/verdata/xml/spesifikasjon/
+https://www.met.no/en/free-meteorological-data/Licensing-and-crediting
 
 The place names included with the application were obtained from the following
 locations:
@@ -155,6 +115,5 @@ service for the data the noreg.txt and verda.txt files are based on.
 The symbols supplied were obtained from the following repository and are
 licensed under the MIT license:
 
-https://github.com/YR/weather-symbols/
-https://github.com/YR/weather-symbols/blob/master/LICENSE
+https://api.met.no/weatherapi/weathericon/2.0/data
 
